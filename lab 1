@@ -1,0 +1,130 @@
+#include <iostream> 
+#include <vector> 
+#include <cmath> 
+#include <iomanip> 
+#include <clocale>
+
+using namespace std;
+
+void printMatrix(const vector<vector<double>>& matrix) {
+    cout << fixed << setprecision(2);
+
+    for (const auto& row : matrix) {
+        for (const auto& elem : row) {
+            cout << setw(8) << elem;
+        }
+        cout << endl;
+    }
+}
+
+void printVector(const vector<double>& vector) {
+    for (const auto& elem : vector) {
+        cout << elem << endl;
+    }
+}
+
+vector<double> computeResidualVector(const vector<vector<double>>& A, const vector<double>& x, const vector<double>& b) {
+    vector<double> residualVector(b.size(), 0.0);
+    for (size_t i = 0; i < 2; ++i) {
+        for (size_t j = 0; j < 2; ++j) {
+            residualVector[i] += A[i][j] * x[j];
+        }
+        residualVector[i] -= b[i];
+    }
+    return residualVector;
+}
+
+double computeResidualNorm(vector<double> residualVector) {
+    double Fmax = 0;
+
+    for (int i = 0; i < 2; i++)
+    {
+        if (abs(residualVector[i]) > Fmax)
+        {
+            Fmax = abs(residualVector[i]);
+        }
+    }
+    return Fmax;
+}
+
+
+vector<double> solveSystem(vector<vector<double>>& A, vector<double>& b)
+{
+    const size_t n = A.size();
+ 
+    for (size_t i = 0; i < n; ++i) {
+
+        size_t maxRow = i;
+        for (size_t k = i + 1; k < n; ++k) {
+            if (abs(A[k][i]) > abs(A[maxRow][i])) {
+                maxRow = k;
+            }
+        }
+
+        swap(A[i], A[maxRow]);
+        swap(b[i], b[maxRow]);
+
+        for (size_t k = i + 1; k < n; ++k) {
+            double factor = A[k][i] / A[i][i];
+            for (size_t j = i; j < n; ++j) {
+                A[k][j] -= factor * A[i][j];
+            }
+            b[k] -= factor * b[i];
+        }
+    }
+
+    vector<double> x(n, 0.0);
+    for (int i = n - 1; i >= 0; --i) {
+        x[i] = b[i] / A[i][i];
+        for (int k = i - 1; k >= 0; --k) {
+            b[k] -= A[k][i] * x[i];
+        }
+    }
+
+    return x;
+}
+
+int main() {
+
+    setlocale(LC_ALL, "Russian");
+
+    vector<vector<double>> A = { {2.75, 1.78, 1.11},
+                                {3.28, 0.71, 1.15},
+                                {1.15, 2.7, 3.58} };
+    vector<double> b = { 15.71, 43.78, 37.11 };
+
+    vector<vector<double>> originalA = A;
+    vector<double> originalB = b;
+
+    vector<double> solution = solveSystem(A, b);
+
+    cout << "Решение системы:" << endl;
+    printVector(solution);
+
+
+    vector<double> residualVector = computeResidualVector(originalA, solution, originalB);
+    double residualNorm = computeResidualNorm(residualVector);
+
+
+    cout << "Вектор невязки:" << endl;
+    printVector(residualVector);
+
+    cout << "Норма вектора невязки: " << residualNorm << endl;
+
+    vector<double> auxiliarySolution = solveSystem(originalA, originalB);
+
+    double delta = 0;
+
+    for (int i = 0; i < 2; i++)
+    {
+        if (abs((auxiliarySolution[i] - residualNorm) / residualNorm) > delta)
+        {
+            delta = abs((auxiliarySolution[i] - residualNorm) / residualNorm);
+        }
+    }
+
+
+    cout << "Относительная погрешность: " << delta << endl;
+
+    return 0;
+}
